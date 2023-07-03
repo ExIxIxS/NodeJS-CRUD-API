@@ -130,20 +130,24 @@ const server = http.createServer((req: IncomingMessage, res: ServerResponse) => 
 
       let responseObj = getResponseObj(404, '')
 
-      if (method === 'GET') {
-        responseObj = getGetResponse(url);
-      }
+      try{
+        if (method === 'GET') {
+          responseObj = getGetResponse(url);
+        }
 
-      if (method === 'POST' && url === '/api/users') {
-        responseObj = getPostResponse(requestBody);
-      }
+        if (method === 'POST' && url === '/api/users') {
+          responseObj = getPostResponse(requestBody);
+        }
 
-      if (method === 'PUT' && url?.startsWith('/api/users/')) {
-        responseObj = getPutResponse(url, requestBody)
-      }
+        if (method === 'PUT' && url?.startsWith('/api/users/')) {
+          responseObj = getPutResponse(url, requestBody)
+        }
 
-      if (method === 'DELETE'&& url?.startsWith('/api/users/')) {
-        responseObj = getDeleteResponse(url);
+        if (method === 'DELETE'&& url?.startsWith('/api/users/')) {
+          responseObj = getDeleteResponse(url);
+        }
+      } catch {
+        responseObj = getResponseObj(500, 'Internal Server Error');
       }
 
       res.writeHead(responseObj.statusCode, {
