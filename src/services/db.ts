@@ -1,26 +1,23 @@
-import { User } from "../interfaces";
+import { User } from '../interfaces';
 
 class FakeDB {
   #userList: User[] = [];
 
-  constructor() {}
-
   getUsers(): User[] {
     return this.#userList.map((user) => {
-      return {...user}
+      return { ...user };
     });
   }
 
   getUser(userId: unknown): User | undefined {
-    if (typeof(userId) !== 'string') {
+    if (typeof userId !== 'string') {
       return;
     }
 
-    const user = this.#userList
-      .find((user) => user.id === userId);
+    const user = this.#userList.find((user) => user.id === userId);
 
     if (user) {
-      return {...user};
+      return { ...user };
     }
   }
 
@@ -29,8 +26,9 @@ class FakeDB {
   }
 
   updateUser(updatedUser: User): void {
-    const userIndex = this.#userList
-    .findIndex((user) => user.id === updatedUser.id);
+    const userIndex = this.#userList.findIndex(
+      (user) => user.id === updatedUser.id
+    );
 
     if (userIndex >= 0) {
       this.#userList.splice(userIndex, 1, updatedUser);
@@ -38,12 +36,11 @@ class FakeDB {
   }
 
   deleteUser(userId: unknown): User | undefined {
-    if (typeof(userId) !== 'string') {
+    if (typeof userId !== 'string') {
       return;
     }
 
-    const userIndex = this.#userList
-    .findIndex((user) => user.id === userId);
+    const userIndex = this.#userList.findIndex((user) => user.id === userId);
 
     if (userIndex >= 0) {
       const deletedUser = this.getUser(userId);

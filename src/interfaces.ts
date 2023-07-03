@@ -7,7 +7,4 @@ interface User {
 
 type RequestUrl = string | undefined;
 
-export {
-  User,
-  RequestUrl,
-};
+export { User, RequestUrl };
