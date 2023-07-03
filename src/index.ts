@@ -1,19 +1,11 @@
 import http, { IncomingMessage, ServerResponse } from 'http';
 import { v4 as uuidv4 } from 'uuid';
 import dotenv from 'dotenv';
+import fakeDB from './services/db';
+
+import { RequestUrl, User } from './interfaces';
 
 dotenv.config();
-
-interface User {
-  id: string;
-  username: string;
-  age: number;
-  hobbies: string[];
-}
-
-type RequestUrl = string | undefined;
-
-let users: User[] = []; // Fake Database for users
 
 function getResponseObj(statusCode: number, response: string) {
   return {
@@ -34,12 +26,19 @@ function isValidUUID(id: unknown): boolean {
 
 function getGetResponse(url: RequestUrl) {
   if (url === '/api/users') {
+    const users = fakeDB.getUsers();
+
     return getResponseObj(200, JSON.stringify(users));
   }
 
   if (url && url.startsWith('/api/users/')) {
     const userId = url.split('/api/users/').at(-1);
-    const user = users.find((user) => user.id === userId);
+
+    if (!isValidUUID(userId)) {
+      return getResponseObj(400, JSON.stringify({ message: 'Not valid user id' }));
+    }
+
+    const user = fakeDB.getUser(userId);
 
     return (user)
       ? getResponseObj(200, JSON.stringify(user))
@@ -50,39 +49,41 @@ function getGetResponse(url: RequestUrl) {
 
 }
 
-function getPostResponse(url: RequestUrl, requestBody: string) {
-    const { username, age, hobbies }: Partial<User> = JSON.parse(requestBody);
+function getPostResponse(requestBody: string) {
+  const { username, age, hobbies }: Partial<User> = JSON.parse(requestBody);
 
-    if (!username || !age || !hobbies?.length || !Array.isArray(hobbies)) {
-      return getResponseObj(400, JSON.stringify({ message: 'Missing required fields' }));
-    } else {
-      const newUser: User = {
-        id: uuidv4(),
-        username,
-        age,
-        hobbies: hobbies,
-      };
+  if (!username || !age || !hobbies?.length || !Array.isArray(hobbies)) {
+    return getResponseObj(400, JSON.stringify({ message: 'Missing required fields' }));
+  } else {
+    const newUser: User = {
+      id: uuidv4(),
+      username,
+      age,
+      hobbies: hobbies,
+    };
 
-      users.push(newUser);
-      return getResponseObj(201, JSON.stringify(newUser));
-    }
+    fakeDB.addUser(newUser);
+
+    return getResponseObj(201, JSON.stringify(newUser));
+  }
 }
 
 function getPutResponse(url: string, requestBody: string) {
-  const userId = url.split('/api/users/').at(-1);
-  const { username, age, hobbies }: Partial<User> = JSON.parse(requestBody);
+  const userId = url
+    .split('/api/users/')
+    .at(-1);
 
-  const userIndex = users.findIndex((user) => user.id === userId);
+  const { username, age, hobbies }: Partial<User> = JSON.parse(requestBody);
 
   if (!isValidUUID(userId)) {
     return getResponseObj(400, JSON.stringify({ message: 'Not valid user id' }));
   }
 
-  if (userIndex === -1) {
+  const currentUser = fakeDB.getUser(userId);
+
+  if (!currentUser) {
     return getResponseObj(404, JSON.stringify({ message: 'User not found' }));
   }
-
-  const currentUser = {...users[userIndex]};
 
   const updatedUser: User = {
     id: currentUser.id,
@@ -97,26 +98,23 @@ function getPutResponse(url: string, requestBody: string) {
       : currentUser.hobbies,
   };
 
-    users[userIndex] = updatedUser;
+    fakeDB.updateUser(updatedUser);
 
     return getResponseObj(200, JSON.stringify(updatedUser));
 }
 
 function getDeleteResponse(url: string) {
   const userId = url.split('/api/users/')[1];
-  const userIndex = users.findIndex((user) => user.id === userId);
 
   if (!isValidUUID(userId)) {
     return getResponseObj(400, JSON.stringify({ message: 'Not valid user id' }));
   }
 
-  if (userIndex === -1) {
-    return getResponseObj(404, JSON.stringify({ message: 'User not found' }))
-  } else {
-    users.splice(userIndex, 1);
+  const deletedUser = fakeDB.deleteUser(userId);
 
-    return getResponseObj(204, JSON.stringify({ message: 'User has been deleted' }));
-  }
+  return (deletedUser)
+    ? getResponseObj(204, JSON.stringify({ message: 'User has been deleted' }))
+    : getResponseObj(404, JSON.stringify({ message: 'User not found' }));
 }
 
 const server = http.createServer((req: IncomingMessage, res: ServerResponse) => {
@@ -137,7 +135,7 @@ const server = http.createServer((req: IncomingMessage, res: ServerResponse) => 
       }
 
       if (method === 'POST' && url === '/api/users') {
-        responseObj = getPostResponse(url, requestBody);
+        responseObj = getPostResponse(requestBody);
       }
 
       if (method === 'PUT' && url?.startsWith('/api/users/')) {
@@ -152,11 +150,12 @@ const server = http.createServer((req: IncomingMessage, res: ServerResponse) => 
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
       });
+
       res.end(responseObj.response);
     });
 });
 
-const port = process.env.PORT || 3000; // 3000 - default if PORT is not set in the .env file
+const port = process.env.PORT || 3000; // - default if PORT is not set in the .env file
 
 server.listen(port, () => {
   console.log(`Server is running on port ${port}`);
