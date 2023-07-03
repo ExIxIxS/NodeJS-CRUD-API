@@ -13,8 +13,7 @@
     "start:dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "webpack --config webpack.config.js",
     "lint": "eslint \"src/**/*.ts\" --fix",
-    "test": "jest",
-    "prettier": "prettier --write \"src/**/*.ts\""
+    "test": "jest"
   },
   "dependencies": {
     "dotenv": "^16.3.1",
